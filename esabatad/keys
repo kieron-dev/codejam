@@ -1,0 +1,4 @@
+00        01
+10        00 - reverse
+11        10 - complement
+01        11 - reverse && complement
