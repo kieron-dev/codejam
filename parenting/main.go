@@ -2,14 +2,31 @@ package main
 
 import (
 	"fmt"
+	"sort"
 )
 
 type Interval struct {
-	From int
-	To   int
+	From  int
+	To    int
+	Order int
+	Who   string
 }
 
-var People []string = []string{"C", "J"}
+type ByTimes []*Interval
+type ByOrder []*Interval
+
+func (a ByTimes) Len() int      { return len(a) }
+func (a ByTimes) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a ByTimes) Less(i, j int) bool {
+	if a[i].From == a[j].From {
+		return a[i].To < a[j].To
+	}
+	return a[i].From < a[j].From
+}
+
+func (a ByOrder) Len() int           { return len(a) }
+func (a ByOrder) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByOrder) Less(i, j int) bool { return a[i].Order < a[j].Order }
 
 func main() {
 	var numCases int
@@ -25,60 +42,42 @@ func main() {
 			panic(err)
 		}
 
-		var intervals []Interval
+		var intervals []*Interval
 		for i := 0; i < jobs; i++ {
 			var interval Interval
+			interval.Order = i
 			_, err := fmt.Scanf("%d %d", &interval.From, &interval.To)
 			if err != nil {
 				panic(err)
 			}
-			intervals = append(intervals, interval)
+			intervals = append(intervals, &interval)
 		}
-		soln := schedule(intervals, map[string][]Interval{})
+		soln := schedule(intervals)
 		fmt.Printf("Case #%d: %s\n", ncase+1, soln)
 	}
 }
 
-func schedule(intervals []Interval, assigned map[string][]Interval) string {
-	if len(intervals) == 0 {
-		return ""
-	}
-	first := intervals[0]
-
-	for _, person := range People {
-		if isFree(first, assigned[person]) {
-			rest := intervals[1:]
-			newAssigned := assign(person, first, assigned)
-			soln := schedule(rest, newAssigned)
-			if soln != "IMPOSSIBLE" {
-				return person + soln
-			}
+func schedule(intervals []*Interval) string {
+	sort.Sort(ByTimes(intervals))
+	CFree := 0
+	JFree := 0
+	for _, interval := range intervals {
+		if interval.From >= CFree {
+			interval.Who = "C"
+			CFree = interval.To
+			continue
 		}
-	}
-
-	return "IMPOSSIBLE"
-}
-
-func isFree(period Interval, assignments []Interval) bool {
-	for _, assignment := range assignments {
-		if (period.From >= assignment.From && period.To <= assignment.To) ||
-			(period.From <= assignment.From && period.To > assignment.From) ||
-			(period.From < assignment.To && period.To >= assignment.To) {
-			return false
+		if interval.From >= JFree {
+			interval.Who = "J"
+			JFree = interval.To
+			continue
 		}
+		return "IMPOSSIBLE"
 	}
-	return true
-}
-
-func assign(person string, period Interval, assigned map[string][]Interval) map[string][]Interval {
-	ret := map[string][]Interval{}
-	for _, p := range People {
-		newSlice := make([]Interval, len(assigned[p]))
-		copy(newSlice, assigned[p])
-		if p == person {
-			newSlice = append(newSlice, period)
-		}
-		ret[p] = newSlice
+	sort.Sort(ByOrder(intervals))
+	out := ""
+	for _, interval := range intervals {
+		out += interval.Who
 	}
-	return ret
+	return out
 }
